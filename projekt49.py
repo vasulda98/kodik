@@ -1,18 +1,32 @@
 """Projekt 49 - Pruchodnost pasoveho dopravniku"""
 import numpy as np
 import pandas as pd
-import matplotlib
-matplotlib.use("Agg")  # pro zobrazeni oken odstrante radek (nebo pouzijte plt.show())
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-VSTUP = Path("data_projekt49.csv")
-VYSTUP = Path("vysledek.csv")
+if "agg" in plt.get_backend().lower():   # backend "Agg" zůstal v paměti z dřívějšího spuštění
+    try:
+        plt.switch_backend("module://matplotlib_inline.backend_inline")   # grafy pod buňkou (Colab/Jupyter)
+    except Exception:
+        pass
+
+try:
+    SLOZKA = Path(__file__).resolve().parent   # složka skriptu
+except NameError:                              # např. Jupyter / interaktivní režim
+    SLOZKA = Path.cwd()
+VSTUP = SLOZKA / "data_projekt49.csv"
+if not VSTUP.exists():                         # např. Colab přejmenuje soubor na "data_projekt49 (1).csv"
+    nalezene = sorted(SLOZKA.glob("data_projekt49*.csv"))
+    if not nalezene:
+        raise FileNotFoundError(f"Nahrajte data_projekt49.csv do složky {SLOZKA}")
+    VSTUP = nalezene[0]
+VYSTUP = SLOZKA / "vysledek.csv"
 PRAH = 0.70   # omezeni: merený průtok < 70 % teoretického
 DT = 1.0      # vzorkování [s]
 
 # ---------------------------------------------------------------- načtení
-df = pd.read_csv(VSTUP)
+df = pd.read_csv(VSTUP, sep=None, engine="python", encoding="utf-8-sig")  # sep=None: čárka i středník
+df.columns = df.columns.str.strip()          # odstranění případných mezer v názvech sloupců
 t = df["cas_s"].to_numpy(dtype=float)
 v = df["rychlost_m_s"].to_numpy(dtype=float)
 rho = df["hustota_ks_m"].to_numpy(dtype=float)
@@ -77,6 +91,17 @@ vysledek.to_csv(VYSTUP, index=False, float_format="%.5f")
 print(f"\nUloženo do {VYSTUP}")
 
 # ---------------------------------------------------------------- Úkol 1 + 2: grafy
+# Obrázek 95: ukázka vstupních dat (měřený průtok)
+fig0, ax0 = plt.subplots(figsize=(7, 4))
+ax0.plot(t, q_mer, color="tab:blue", lw=1.2)
+ax0.set_title("Projekt 49: ukázka vstupních dat")
+ax0.set_xlabel("cas_s")
+ax0.set_ylabel("mereny_prutok_ks_s")
+ax0.grid(alpha=0.3)
+fig0.tight_layout()
+fig0.savefig(SLOZKA / "projekt49_vstupni_data.png", dpi=150)
+
+# Obrázek 96: rychlost, hustota, průchodnost, kumulovaná ztráta
 fig, ax = plt.subplots(2, 2, figsize=(13, 8))
 plt.rcParams["axes.grid"] = True
 
@@ -102,5 +127,5 @@ for i in range(2):
         ax[i, j].grid(alpha=0.3)
         ax[i, j].set_xlim(-30, 630)
 fig.tight_layout()
-fig.savefig("projekt49_grafy.png", dpi=150)
-# plt.show()   # odkomentujte pro zobrazení okna
+fig.savefig(SLOZKA / "projekt49_grafy.png", dpi=150)
+plt.show()   # zobrazí oba obrázky (5 grafů)
